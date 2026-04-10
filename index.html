@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Boss Battle Photo Edition</title>
+    <title>Boss Battle - CD Edition</title>
     <style>
         * { touch-action: manipulation; box-sizing: border-box; }
         
@@ -11,8 +11,7 @@
             background: #000; margin: 0; padding: 0;
             display: flex; flex-direction: column;
             height: 100vh; width: 100vw;
-            font-family: sans-serif;
-            overflow: hidden; color: white;
+            font-family: sans-serif; overflow: hidden; color: white;
         }
 
         /* 血條區 */
@@ -41,57 +40,33 @@
             overflow: hidden;
         }
 
-        /* ========================================= */
-        /* 1. 改動：Boss 樣式 (加入相片) */
-        /* ========================================= */
         #boss {
             position: absolute;
-            /* 根據你張相嘅比例調整闊高 */
-            width: 150px; 
-            height: 150px;
-            
-            /* 【在此處輸入 Boss 相片路徑】 */
-            background-image: url('boss.png'); 
-            
-            /* 確保相片唔會重複，並置中縮放 */
+            width: 150px; height: 150px;
+            background-image: url('boss.png'); /* 記得換成你的相片 */
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
-            
-            /* 移除原本嘅 Emoji 同字體設定 */
             top: 20%; left: calc(50% - 40px);
             transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 10;
         }
 
-        /* ========================================= */
-        /* 2. 改動：導彈基礎樣式 (加入相片) */
-        /* ========================================= */
         .missile {
-            position: absolute;
-            /* 根據你張相嘅比例調整闊高 */
-            width: 20px;
-            height: 30px;
-            
-            /* 【在此處輸入導彈相片路徑】 */
-            background-image: url('missile.png');
-            
+            position: absolute; width: 20px; height: 30px;
+            background-image: url('missile.png'); /* 記得換成你的相片 */
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
-            
-            /* 移除原本嘅圓角同背景顏色 */
             bottom: 0;
-            /* 選擇性：保留少少發光效果令佢更明顯 */
-            box-shadow: 0 0 5px rgba(255,255,255,0.5);
         }
 
-        /* 軌跡定義 (維持不變) */
+        /* 軌跡動畫 */
         .type-normal { animation: shoot-up 0.5s linear forwards; }
-        .type-slow { animation: shoot-up 3.0s linear forwards; }
-        .type-s-curve { animation: s-move 2.0s linear forwards; }
-        .type-diagonal { animation: diagonal-up 1.5s linear forwards; }
-        .type-spin { animation: spin-move 1.5s linear forwards; }
+        .type-slow { animation: shoot-up 1.0s linear forwards; }
+        .type-s-curve { animation: s-move 0.7s linear forwards; }
+        .type-diagonal { animation: diagonal-up 0.6s linear forwards; }
+        .type-spin { animation: spin-move 0.8s linear forwards; }
 
         @keyframes shoot-up { to { transform: translateY(-120vh); } }
         @keyframes s-move {
@@ -106,44 +81,53 @@
         .controller {
             height: 18%; width: 100%;
             display: grid; grid-template-columns: repeat(5, 1fr);
-            gap: 4px; padding: 8px;
+            gap: 5px; padding: 10px;
             background: #222; border-top: 1px solid #444;
         }
 
         .fire-btn {
+            position: relative; /* 為了放 CD 遮罩 */
             border: none; border-radius: 12px;
             background: #3d3d3d; color: white;
             font-size: 24px; display: flex;
             align-items: center; justify-content: center;
-            -webkit-tap-highlight-color: transparent;
+            overflow: hidden;
         }
 
-        .fire-btn:active { background: #555; transform: scale(0.92); }
+        /* 冷卻中的按鈕樣式 */
+        .fire-btn.cd-active {
+            pointer-events: none; /* 冷卻中不能點擊 */
+            background: #222;
+            opacity: 0.6;
+        }
+
+        /* 冷卻進度遮罩 */
+        .cd-overlay {
+            position: absolute;
+            bottom: 0; left: 0; width: 100%; height: 0%;
+            background: rgba(255, 255, 255, 0.2);
+            transition: height linear;
+        }
     </style>
 </head>
 <body>
 
     <div class="header">
         <div style="font-size: 12px; color: #ff4757; margin-bottom: 4px; font-weight: bold;">BOSS HP</div>
-        <div class="hp-bar-bg">
-            <div id="hp-fill"></div>
-        </div>
+        <div class="hp-bar-bg"><div id="hp-fill"></div></div>
     </div>
 
-    <div id="game-stage">
-        <div id="boss"></div>
-    </div>
+    <div id="game-stage"><div id="boss"></div></div>
 
     <div class="controller">
-        <button class="fire-btn" ontouchstart="shoot(event, 'normal')" onclick="shoot(event, 'normal')">🚀</button>
-        <button class="fire-btn" ontouchstart="shoot(event, 'slow')" onclick="shoot(event, 'slow')">🐢</button>
-        <button class="fire-btn" ontouchstart="shoot(event, 's-curve')" onclick="shoot(event, 's-curve')">🐍</button>
-        <button class="fire-btn" ontouchstart="shoot(event, 'diagonal')" onclick="shoot(event, 'diagonal')">↗️</button>
-        <button class="fire-btn" ontouchstart="shoot(event, 'spin')" onclick="shoot(event, 'spin')">🌀</button>
+        <button class="fire-btn" onclick="shoot(event, 'normal', 400)">🚀<div class="cd-overlay"></div></button>
+        <button class="fire-btn" onclick="shoot(event, 'slow', 1200)">🐢<div class="cd-overlay"></div></button>
+        <button class="fire-btn" onclick="shoot(event, 's-curve', 2000)">🐍<div class="cd-overlay"></div></button>
+        <button class="fire-btn" onclick="shoot(event, 'diagonal', 800)">↗️<div class="cd-overlay"></div></button>
+        <button class="fire-btn" onclick="shoot(event, 'spin', 1500)">🌀<div class="cd-overlay"></div></button>
     </div>
 
     <script>
-        // (JavaScript 邏輯維持不變，除咗少少座標微調)
         let bossHP = 100;
         const boss = document.getElementById('boss');
         const hpFill = document.getElementById('hp-fill');
@@ -152,27 +136,43 @@
         function moveBoss() {
             if (bossHP <= 0) return;
             const maxX = stage.clientWidth - boss.clientWidth;
-            const randomX = Math.floor(Math.random() * maxX);
-            boss.style.left = randomX + 'px';
-            
-            let delay = 600 + (bossHP * 4); 
-            setTimeout(moveBoss, delay);
+            boss.style.left = Math.floor(Math.random() * maxX) + 'px';
+            setTimeout(moveBoss, 600 + (bossHP * 4));
         }
         moveBoss();
 
-        function shoot(e, type) {
-            if (e.type === 'touchstart') e.preventDefault();
-            if (bossHP <= 0) return;
-
+        function shoot(e, type, cdTime) {
             const btn = e.currentTarget;
+            
+            // 如果正在冷卻中或 Boss 死了，就跳出
+            if (btn.classList.contains('cd-active') || bossHP <= 0) return;
+
+            // 1. 處理冷卻邏輯
+            btn.classList.add('cd-active');
+            const overlay = btn.querySelector('.cd-overlay');
+            
+            // 重設遮罩高度
+            overlay.style.transition = 'none';
+            overlay.style.height = '100%';
+            
+            // 啟動冷卻動畫
+            setTimeout(() => {
+                overlay.style.transition = `height ${cdTime}ms linear`;
+                overlay.style.height = '0%';
+            }, 10);
+
+            // 冷卻結束後移除狀態
+            setTimeout(() => {
+                btn.classList.remove('cd-active');
+            }, cdTime);
+
+            // 2. 發射導彈邏輯
             const btnRect = btn.getBoundingClientRect();
             const stageRect = stage.getBoundingClientRect();
-            
             const relativeX = (btnRect.left + btnRect.width / 2) - stageRect.left;
 
             const missile = document.createElement('div');
             missile.className = `missile type-${type}`;
-            // 微調導彈中心點 (闊度的一半)
             missile.style.left = (relativeX - 10) + 'px';
             stage.appendChild(missile);
 
@@ -183,11 +183,15 @@
                 if (mRect.left < bRect.right && mRect.right > bRect.left &&
                     mRect.top < bRect.bottom && mRect.bottom > bRect.top) {
                     
-                    bossHP -= 4;
+                    // 根據導彈類型決定扣血量 (隨你調整)
+                    let dmg = 5;
+                    if (type === 's-curve') dmg = 15;
+                    if (type === 'slow') dmg = 10;
+
+                    bossHP -= dmg;
                     if (bossHP < 0) bossHP = 0;
                     hpFill.style.width = bossHP + '%';
                     
-                    // 擊中效果 (維持 brightness 閃光)
                     boss.style.filter = 'brightness(5) saturate(0)';
                     setTimeout(() => boss.style.filter = 'none', 80);
 
