@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Boss Battle Photo Edition</title>
+    <style>
+        * { touch-action: manipulation; box-sizing: border-box; }
+        
+        body { 
+            background: #000; margin: 0; padding: 0;
+            display: flex; flex-direction: column;
+            height: 100vh; width: 100vw;
+            font-family: sans-serif;
+            overflow: hidden; color: white;
+        }
+
+        /* 血條區 */
+        .header {
+            height: 12%; width: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: #111; border-bottom: 1px solid #333;
+        }
+
+        .hp-bar-bg {
+            width: 85%; height: 18px;
+            background: #333; border-radius: 9px; overflow: hidden;
+            border: 1.5px solid #666;
+        }
+
+        #hp-fill {
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, #ff4757, #ff6b81);
+            transition: width 0.2s ease;
+        }
+
+        /* 遊戲舞台 */
+        #game-stage {
+            flex: 1; position: relative;
+            width: 100%; background: #1a1a1a;
+            overflow: hidden;
+        }
+
+        /* ========================================= */
+        /* 1. 改動：Boss 樣式 (加入相片) */
+        /* ========================================= */
+        #boss {
+            position: absolute;
+            /* 根據你張相嘅比例調整闊高 */
+            width: 150px; 
+            height: 150px;
+            
+            /* 【在此處輸入 Boss 相片路徑】 */
+            background-image: url('boss.png'); 
+            
+            /* 確保相片唔會重複，並置中縮放 */
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            
+            /* 移除原本嘅 Emoji 同字體設定 */
+            top: 20%; left: calc(50% - 40px);
+            transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 10;
+        }
+
+        /* ========================================= */
+        /* 2. 改動：導彈基礎樣式 (加入相片) */
+        /* ========================================= */
+        .missile {
+            position: absolute;
+            /* 根據你張相嘅比例調整闊高 */
+            width: 20px;
+            height: 30px;
+            
+            /* 【在此處輸入導彈相片路徑】 */
+            background-image: url('missile.png');
+            
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            
+            /* 移除原本嘅圓角同背景顏色 */
+            bottom: 0;
+            /* 選擇性：保留少少發光效果令佢更明顯 */
+            box-shadow: 0 0 5px rgba(255,255,255,0.5);
+        }
+
+        /* 軌跡定義 (維持不變) */
+        .type-normal { animation: shoot-up 0.5s linear forwards; }
+        .type-slow { animation: shoot-up 1.0s linear forwards; }
+        .type-s-curve { animation: s-move 0.7s linear forwards; }
+        .type-diagonal { animation: diagonal-up 0.6s linear forwards; }
+        .type-spin { animation: spin-move 0.8s linear forwards; }
+
+        @keyframes shoot-up { to { transform: translateY(-120vh); } }
+        @keyframes s-move {
+            0% { transform: translateY(0) translateX(0); }
+            50% { transform: translateY(-40vh) translateX(-60px); }
+            100% { transform: translateY(-120vh) translateX(0); }
+        }
+        @keyframes diagonal-up { to { transform: translateY(-120vh) translateX(150px); } }
+        @keyframes spin-move { to { transform: translateY(-120vh) rotate(1080deg) translateX(40px); } }
+
+        /* 按鈕區 */
+        .controller {
+            height: 18%; width: 100%;
+            display: grid; grid-template-columns: repeat(5, 1fr);
+            gap: 4px; padding: 8px;
+            background: #222; border-top: 1px solid #444;
+        }
+
+        .fire-btn {
+            border: none; border-radius: 12px;
+            background: #3d3d3d; color: white;
+            font-size: 24px; display: flex;
+            align-items: center; justify-content: center;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .fire-btn:active { background: #555; transform: scale(0.92); }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div style="font-size: 12px; color: #ff4757; margin-bottom: 4px; font-weight: bold;">BOSS HP</div>
+        <div class="hp-bar-bg">
+            <div id="hp-fill"></div>
+        </div>
+    </div>
+
+    <div id="game-stage">
+        <div id="boss"></div>
+    </div>
+
+    <div class="controller">
+        <button class="fire-btn" ontouchstart="shoot(event, 'normal')" onclick="shoot(event, 'normal')">🚀</button>
+        <button class="fire-btn" ontouchstart="shoot(event, 'slow')" onclick="shoot(event, 'slow')">🐢</button>
+        <button class="fire-btn" ontouchstart="shoot(event, 's-curve')" onclick="shoot(event, 's-curve')">🐍</button>
+        <button class="fire-btn" ontouchstart="shoot(event, 'diagonal')" onclick="shoot(event, 'diagonal')">↗️</button>
+        <button class="fire-btn" ontouchstart="shoot(event, 'spin')" onclick="shoot(event, 'spin')">🌀</button>
+    </div>
+
+    <script>
+        // (JavaScript 邏輯維持不變，除咗少少座標微調)
+        let bossHP = 100;
+        const boss = document.getElementById('boss');
+        const hpFill = document.getElementById('hp-fill');
+        const stage = document.getElementById('game-stage');
+
+        function moveBoss() {
+            if (bossHP <= 0) return;
+            const maxX = stage.clientWidth - boss.clientWidth;
+            const randomX = Math.floor(Math.random() * maxX);
+            boss.style.left = randomX + 'px';
+            
+            let delay = 600 + (bossHP * 4); 
+            setTimeout(moveBoss, delay);
+        }
+        moveBoss();
+
+        function shoot(e, type) {
+            if (e.type === 'touchstart') e.preventDefault();
+            if (bossHP <= 0) return;
+
+            const btn = e.currentTarget;
+            const btnRect = btn.getBoundingClientRect();
+            const stageRect = stage.getBoundingClientRect();
+            
+            const relativeX = (btnRect.left + btnRect.width / 2) - stageRect.left;
+
+            const missile = document.createElement('div');
+            missile.className = `missile type-${type}`;
+            // 微調導彈中心點 (闊度的一半)
+            missile.style.left = (relativeX - 10) + 'px';
+            stage.appendChild(missile);
+
+            const checkHit = setInterval(() => {
+                const bRect = boss.getBoundingClientRect();
+                const mRect = missile.getBoundingClientRect();
+
+                if (mRect.left < bRect.right && mRect.right > bRect.left &&
+                    mRect.top < bRect.bottom && mRect.bottom > bRect.top) {
+                    
+                    bossHP -= 4;
+                    if (bossHP < 0) bossHP = 0;
+                    hpFill.style.width = bossHP + '%';
+                    
+                    // 擊中效果 (維持 brightness 閃光)
+                    boss.style.filter = 'brightness(5) saturate(0)';
+                    setTimeout(() => boss.style.filter = 'none', 80);
+
+                    missile.remove();
+                    clearInterval(checkHit);
+
+                    if (bossHP === 0) {
+                        alert('Mission Accomplished!');
+                        location.reload();
+                    }
+                }
+            }, 16);
+
+            setTimeout(() => { if (missile.parentNode) missile.remove(); clearInterval(checkHit); }, 1200);
+        }
+    </script>
+</body>
+</html>
